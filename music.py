@@ -22,34 +22,41 @@ def extract_chord_list(skank_midi_file):
     return chordList
 
 def encode_chord(c, encoding):
-    c = c.simplifyEnharmonics() # use to provide a logical chord to music21
-    if c.root().name in _ROOT_NOTES:
-        root = c.root().name
+    if c == None:
+        if encoding == 'one-hot':
+            return np.zeros((len(_ROOT_NOTES)*2))
+        elif encoding == 'many-hot-close':
+            return np.zeros((len(_ROOT_NOTES)))
+        
     else:
-        for p in [pitch.name for pitch in c.root().getAllCommonEnharmonics()]:
-            if p in _ROOT_NOTES:
-                root = p.name
+        c = c.simplifyEnharmonics() # use to provide a logical chord to music21
+        if c.root().name in _ROOT_NOTES:
+            root = c.root().name
+        else:
+            for p in [pitch.name for pitch in c.root().getAllCommonEnharmonics()]:
+                if p in _ROOT_NOTES:
+                    root = p
+                    
+        if encoding == 'one-hot':
+            nFeatures = len(_ROOT_NOTES)*2 # minor and major are counted
+            vec = np.zeros(nFeatures)
+            if c.quality == 'minor':
+                note_index = _ROOT_NOTES.index(root)
+                vec[note_index] = 1
+            elif c.quality == 'major':
+                note_index = _ROOT_NOTES.index(root)
+                vec[note_index+12] = 1
                 
-    if encoding == 'one-hot':
-        nFeatures = len(_ROOT_NOTES)*2 # minor and major are counted
-        vec = np.zeros(nFeatures)
-        if c.quality == 'minor':
-            note_index = _ROOT_NOTES.index(root)
-            vec[note_index] = 1
-        elif c.quality == 'major':
-            note_index = _ROOT_NOTES.index(root)
-            vec[note_index+12] = 1
-            
-    elif encoding == 'many-hot-close':
-        nFeatures = len(_ROOT_NOTES)
-        vec = np.zeros(nFeatures)
-        for pitch in c.pitches:
-            if pitch.name not in _ROOT_NOTES:
-                for p in [enh_pitch for enh_pitch in pitch.getAllCommonEnharmonics()]:
-                    if p.name in _ROOT_NOTES:
-                        pitch = p
-                        
-            note_index = _ROOT_NOTES.index(pitch.name)
-            vec[note_index] = 1
-            
-    return vec
+        elif encoding == 'many-hot-close':
+            nFeatures = len(_ROOT_NOTES)
+            vec = np.zeros(nFeatures)
+            for pitch in c.pitches:
+                if pitch.name not in _ROOT_NOTES:
+                    for p in [enh_pitch.name for enh_pitch in pitch.getAllCommonEnharmonics()]:
+                        if p in _ROOT_NOTES:
+                            pitch = p
+                            
+                note_index = _ROOT_NOTES.index(pitch.name)
+                vec[note_index] = 1
+                
+        return vec
