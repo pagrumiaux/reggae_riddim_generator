@@ -61,9 +61,51 @@ def encode_chord(c, encoding):
                 
         return vec
     
+def decode_chord(encodedChord, encoding):
+    if np.count_nonzero(encodedChord) == 0:
+        return None
+    
+    if encoding == 'one-hot':
+        chordIdx = np.argmax(encodedChord)
+        if chordIdx < 12:
+            quality = 'minor'
+        else:
+            quality = 'major'
+            chordIdx = chordIdx - 12
+            
+        root = _ROOT_NOTES[chordIdx]
+        if quality == 'minor':
+            third = _ROOT_NOTES[(chordIdx+3)%12]
+        elif quality == 'major':
+            third = _ROOT_NOTES[(chordIdx+4)%12]
+            
+        fifth = _ROOT_NOTES[(chordIdx+7)%12]
+        
+        return chord.Chord([root, third, fifth])
+    
+    elif encoding == 'many-hot-close':
+        idxNotes = np.where(encodedChord)[0]
+        chordNotes = []
+        for i in idxNotes:
+            chordNotes.append(_ROOT_NOTES[i])
+        
+        return chord.Chord(chordNotes)
+        
+    
 def transpose_chord_list(chordList, transpositionInterval):
     chordList_transposed = []
     for c in chordList:
         chordList_transposed.append(c.transpose(transpositionInterval))
         
     return chordList_transposed
+
+def random_chord(quality):
+    randomRoot = np.random.choice(np.arange(12))
+    root = _ROOT_NOTES[randomRoot]
+    fifth = _ROOT_NOTES[(randomRoot+7)%12]
+    if quality == 'minor':
+        third = _ROOT_NOTES[(randomRoot+3)%12]
+    if quality == 'major':
+        third = _ROOT_NOTES[(randomRoot+4)%12]
+        
+    return chord.Chord([root, third, fifth])

@@ -12,6 +12,7 @@ from dataGenerator import DataGenerator
 import time
 import datetime
 import matplotlib.pyplot as plt
+import h5py
 #%% train generator
 paramsTrain = {'trackName': 'skank',
                'encoding' : 'one-hot',
@@ -59,4 +60,9 @@ modelPath = modelPath + date + '.h5'
 tic = time.time()
 history = model.fit_generator(generator=trainGenerator, epochs=nEpochs, verbose=1)
 model.save(filepath = modelPath)
+
+with h5py.File(modelPath, 'r+') as f:
+    f.attrs['encoding'] = trainGenerator.encoding
+    f.attrs['timesteps'] = trainGenerator.timesteps
+    
 toc = time.time()
