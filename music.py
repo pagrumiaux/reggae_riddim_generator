@@ -60,3 +60,10 @@ def encode_chord(c, encoding):
                 vec[note_index] = 1
                 
         return vec
+    
+def transpose_chord_list(chordList, transpositionInterval):
+    chordList_transposed = []
+    for c in chordList:
+        chordList_transposed.append(c.transpose(transpositionInterval))
+        
+    return chordList_transposed

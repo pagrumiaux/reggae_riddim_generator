@@ -22,6 +22,7 @@ class DataGenerator(keras.utils.Sequence):
                timesteps = 4,
                seqOverlap = 'max',
                shuffle = True,
+               dataAugmentation = False
                ):
         
         if datasetPath is None:
@@ -57,18 +58,25 @@ class DataGenerator(keras.utils.Sequence):
         self.batch_size = batch_size
         self.nSeqPerSong = int((self.maxLength-1)/(self.timesteps-self.seqOverlap))
         self.shuffle = shuffle
+        self.dataAugmentation = dataAugmentation
         
         # shuffling
         self.idxSeqEpoch = None
         self.idxSongEpoch = None
+        self.idxTransposeEpoch = None
         
         self.on_epoch_end()
         
     def __len__(self):
         if self.seqOverlap == 'max':
-            return len(self.songList*(self.maxLength-1)) // self.batch_size
+            length = len(self.songList*(self.maxLength-1)) // self.batch_size
         else:
-            return len(self.songList*self.nSeqPerSong) // self.batch_size
+            length = len(self.songList*self.nSeqPerSong) // self.batch_size
+        
+        if self.dataAugmentation:
+            length = length * 12
+            
+        return length
     
     def  __getitem__(self, idx):
         batchStart = idx * self.batch_size
@@ -76,16 +84,18 @@ class DataGenerator(keras.utils.Sequence):
         
         idxSongBatch = self.idxSongEpoch[batchStart:batchEnd]
         idxSeqBatch = self.idxSeqEpoch[batchStart:batchEnd]
+        idxTransposeBatch = self.idxTransposeEpoch[batchStart:batchEnd]
         
-        inputSeq, target = self._data_load(idxSongBatch, idxSeqBatch)
+        inputSeq, target = self._data_load(idxSongBatch, idxSeqBatch, idxTransposeBatch)
         
         return inputSeq, target
         
     def on_epoch_end(self):
         nSong = len(self.songList)
-        idxSeq, idxSong = np.meshgrid(range(self.nSeqPerSong), range(nSong))
+        idxSeq, idxSong, idxTranspose = np.meshgrid(range(self.nSeqPerSong), range(nSong), range(12))
         idxSeq = idxSeq.flatten()
         idxSong = idxSong.flatten()
+        idxTranspose = idxTranspose.flatten()
         
         indexes = np.arange(len(idxSeq))
         if self.shuffle:
@@ -93,14 +103,18 @@ class DataGenerator(keras.utils.Sequence):
             
         self.idxSongEpoch = idxSong[indexes]
         self.idxSeqEpoch = idxSeq[indexes]
+        self.idxTransposeEpoch = idxTranspose[indexes]
     
-    def _data_load(self, idxSongBatch, idxSeqBatch):
+    def _data_load(self, idxSongBatch, idxSeqBatch, idxTransposeBatch):
         inputSeq = np.empty((self.batch_size, self.timesteps, self.nFeatures))
         target = np.empty((self.batch_size, self.nFeatures))
         
         for iSong, song in enumerate(idxSongBatch):
             songFile = self.songList[song]
             chordList = music.extract_chord_list(songFile)
+            
+            if self.dataAugmentation:
+                chordList = music.transpose_chord_list(chordList, idxTransposeBatch[iSong])
             
             if len(chordList) < self.maxLength:
                 for i in range(self.maxLength-len(chordList)):
@@ -112,19 +126,11 @@ class DataGenerator(keras.utils.Sequence):
                     inputSeq[iSong, t, :] = np.zeros((self.nFeatures))
                 for t in range(idxSeqBatch[iSong]+1):
                     inputSeq[iSong, (self.timesteps-(idxSeqBatch[iSong]+1))+t, :] = music.encode_chord(chordList[t], self.encoding)
-            
-#            elif idxSeqBatch[iSong] + self.timesteps > self.maxLength: #zero-padding at the end of the sequence
-#                for t in range(self.maxLength - idxSeqBatch[iSong]):
-#                    print(t, idxSeqBatch[iSong]+1-self.timesteps+t)
-#                    inputSeq[iSong, t, :] = music.encode_chord(chordList[idxSeqBatch[iSong]+1-self.timesteps+t], self.encoding)
-#                for t in range(idxSeqBatch[iSong] + self.timesteps - self.maxLength):
-#                    print(t, self.maxLength - idxSeqBatch[iSong]+t)
-#                    inputSeq[iSong, self.maxLength - idxSeqBatch[iSong]+t, :] = np.zeros((self.nFeatures))
-            
+                        
             else:
                 for t in range(self.timesteps): # no zero-padding needed
                     inputSeq[iSong, t, :] = music.encode_chord(chordList[idxSeqBatch[iSong]+1-self.timesteps+t], self.encoding)
-
+            
             # target
             target[iSong, :] = music.encode_chord(chordList[idxSeqBatch[iSong]+1], self.encoding)
                     

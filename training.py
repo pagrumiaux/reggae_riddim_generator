@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 #%% train generator
 paramsTrain = {'trackName': 'skank',
                'encoding' : 'one-hot',
-               'batch_size': 1,
+               'batch_size': 32,
                'maxLength': 16,
                'timesteps': 8,
                'seqOverlap': 'max',
-               'shuffle': False
+               'shuffle': True,
+               'dataAugmentation': True
                }
 
 paramsTrain['datasetPath'] = './dataset/'
@@ -35,7 +36,7 @@ lstmUnits = 64
 lstmAct = 'tanh'
 outputUnits = nFeat
 dropout = 0.2
-nEpochs = 1
+nEpochs = 5
 lr = 10e-3
 
 # optimizer
@@ -52,7 +53,7 @@ model.compile(optimizer=Adam, loss='categorical_crossentropy', metrics=['categor
 
 #%% training
 date = '_'+datetime.datetime.now().strftime('%Y-%m-%d')
-modelPath = "lstm_64units"
+modelPath = "lstm_64units_dataAug"
 modelPath = modelPath + date + '.h5'
 
 tic = time.time()
