@@ -69,12 +69,14 @@ class DataGenerator(keras.utils.Sequence):
         
     def __len__(self):
         if self.seqOverlap == 'max':
-            length = len(self.songList*(self.maxLength-1)) // self.batch_size
+            length = len(self.songList)*(self.maxLength-1) // self.batch_size
         else:
-            length = len(self.songList*self.nSeqPerSong) // self.batch_size
+            length = len(self.songList)*self.nSeqPerSong // self.batch_size
         
+
         if self.dataAugmentation:
             length = length * 12
+            
             
         return length
     

@@ -37,7 +37,7 @@ lstmUnits = 64
 lstmAct = 'tanh'
 outputUnits = nFeat
 dropout = 0.2
-nEpochs = 5
+nEpochs = 1
 lr = 10e-3
 
 # optimizer
@@ -66,3 +66,5 @@ with h5py.File(modelPath, 'r+') as f:
     f.attrs['timesteps'] = trainGenerator.timesteps
     
 toc = time.time()
+total_time = datetime.timedelta(seconds=toc-tic)
+print(f'Time spent for training : {total_time}.')
